@@ -10,6 +10,8 @@
 
 | Mục                  | Quy ước                                                                                                                     |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Ngôn ngữ       | Python3                                                                                                                       |
+| Giao diện       | Console (`prompt_toolkit` + `patch_stdout()`)                                                                                                                    |
 | Mã hóa văn bản       | UTF-8                                                                                                                       |
 | Ký tự phân cách      | `\|`. Trong gói TCP, mọi trường header đều kết thúc bằng `\|`, kể cả trường cuối                                            |
 | `<length>`, `<size>` | Số nguyên thập phân không dấu, tính bằng **byte**, không phải ký tự                                                         |
