@@ -41,11 +41,49 @@ def make_hello(name: str, tcp_port: int, status: str) -> bytes:
     return text.encode("utf-8")
 
 
+def parse_hello(data: bytes) -> tuple[str, int, str] | None:
+    """Return (name, tcp_port, status), or None if the packet is invalid."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+    elements = text.split("|")
+    if len(elements) != 4 or elements[0] != "HELLO":
+        return None
+
+    _, name, port_text, status = elements
+
+    if len(name) <= 0 or len(name.encode("utf-8")) > 32 or name.strip() != name or "  " in name:
+        return None
+
+    try:
+        tcp_port = int(port_text)
+    except ValueError:
+        return None
+
+    if tcp_port <= 0 or tcp_port > 65535:
+        return None
+
+    if status not in ("online", "away"):
+        return None
+
+    return name, tcp_port, status
+
+
 def _listener() -> None:
     """Receive HELLO packets and print them"""
     while True:
         data, addr = _sock.recvfrom(1024)
-        print(data, addr)
+        hello = parse_hello(data)
+
+        if hello is None:
+            continue
+
+        name, tcp_port, status = hello
+        if name == _name and _tcp_port == tcp_port:
+            continue
+        print(name, tcp_port, status, addr[0])
 
 
 if __name__ == "__main__":
