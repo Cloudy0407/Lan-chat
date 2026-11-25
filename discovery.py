@@ -19,6 +19,7 @@ def start(name: str, tcp_port: int) -> None:
     _sock = _make_socket()
     threading.Thread(target=_broadcaster, daemon=True).start()
     threading.Thread(target=_listener, daemon=True).start()
+    threading.Thread(target=_cleaner, daemon=True).start()
 
 
 def _make_socket() -> socket.socket:
@@ -115,6 +116,15 @@ def _listener() -> None:
                 tcp_port,
                 f"[!] Tên '{name}' đã có người dùng, bỏ qua gói từ {ip}:{tcp_port}",
             )
+
+
+def _cleaner() -> None:
+    """Every second, remove peers that timed out and announce them offline."""
+    while True:
+        remove_list = state.remove_stale_peers(10)
+        for name in remove_list:
+            print(f"{name} is offline")
+        time.sleep(1)
 
 
 if __name__ == "__main__":

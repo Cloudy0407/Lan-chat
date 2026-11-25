@@ -42,3 +42,16 @@ def list_peers() -> list[dict]:
             item["name"] = name
             result.append(item)
     return result
+
+
+def remove_stale_peers(timeout: float) -> list[str]:
+    """Remove peers not heard from for more than `timeout` seconds. Return their names."""
+    with _lock:
+        item_remove = []
+        now = time.monotonic()
+        for key, val in _peers.items():
+            if now - val["last_seen"] > timeout:
+                item_remove.append(key)
+        for name in item_remove:
+            del _peers[name]
+        return item_remove
