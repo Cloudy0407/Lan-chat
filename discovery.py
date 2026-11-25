@@ -2,11 +2,14 @@ import socket
 import threading
 import time
 
+import state
+
 PORT = 9999
 _sock: socket.socket | None = None
 _name = ""
 _tcp_port = 0
 _status = "online"
+_warned: set[tuple[str, str, int]] = set()
 
 
 def start(name: str, tcp_port: int) -> None:
@@ -71,6 +74,15 @@ def parse_hello(data: bytes) -> tuple[str, int, str] | None:
     return name, tcp_port, status
 
 
+def _warn_once(name: str, ip: str, tcp_port: int, message: str) -> None:
+    """Print a warning only the first time a given source causes it."""
+    key = (name, ip, tcp_port)
+    if key in _warned:
+        return
+    _warned.add(key)
+    print(message)
+
+
 def _listener() -> None:
     """Receive HELLO packets and print them"""
     while True:
@@ -81,9 +93,28 @@ def _listener() -> None:
             continue
 
         name, tcp_port, status = hello
-        if name == _name and _tcp_port == tcp_port:
+        ip = addr[0]
+
+        if name == _name:
+            if tcp_port != _tcp_port:
+                _warn_once(
+                    name,
+                    ip,
+                    tcp_port,
+                    f"[!] Có người khác đang dùng tên '{name}' ({ip}:{tcp_port})",
+                )
             continue
-        print(name, tcp_port, status, addr[0])
+
+        result = state.update_peer(name, ip, tcp_port, status)
+        if result == "new":
+            print(f"{name} is online")
+        elif result == "conflict":
+            _warn_once(
+                name,
+                ip,
+                tcp_port,
+                f"[!] Tên '{name}' đã có người dùng, bỏ qua gói từ {ip}:{tcp_port}",
+            )
 
 
 if __name__ == "__main__":
