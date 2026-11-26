@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from file import recv_file, resolve_unique_path, send_file
+from file import (
+    progress_percent,
+    recv_file,
+    resolve_unique_path,
+    send_file,
+    send_file_async,
+)
 from framing import ConnectionClosedError, HiFrame, encode_file_header, recv_hi
 
 
@@ -210,3 +216,93 @@ def test_send_directory_raises_error(tmp_path: Path) -> None:
             peer_port=5000,
             filepath=tmp_path,
         )
+
+
+def test_progress_percent_values() -> None:
+    assert progress_percent(0, 0) == 100
+    assert progress_percent(0, 100) == 0
+    assert progress_percent(50, 100) == 50
+    assert progress_percent(150, 100) == 100
+
+
+def test_recv_file_calls_on_start_before_progress(tmp_path: Path) -> None:
+    events: list[tuple[str, object]] = []
+    s1, s2 = socket.socketpair()
+    with s1, s2:
+        s1.sendall(encode_file_header("notes.txt", 5) + b"hello")
+        s1.shutdown(socket.SHUT_WR)
+        saved = recv_file(
+            s2,
+            download_dir=tmp_path,
+            on_start=lambda name, size: events.append(("start", (name, size))),
+            on_progress=lambda done, total: events.append(("progress", (done, total))),
+        )
+    assert saved == tmp_path / "notes.txt"
+    assert events[0] == ("start", ("notes.txt", 5))
+    assert events[1] == ("progress", (0, 5))
+    assert events[-1] == ("progress", (5, 5))
+
+
+def test_send_file_async_call_on_done(tmp_path: Path) -> None:
+    src_file = tmp_path / "async.txt"
+    src_file.write_bytes(b"hello async")
+    done_paths: list[Path] = []
+    errors: list[Exception] = []
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.bind(("127.0.0.1", 0))
+        server.listen(1)
+        server.settimeout(5.0)
+        port = server.getsockname()[1]
+
+        def _accept() -> None:
+            conn, _ = server.accept()
+            with conn:
+                recv_hi(conn)
+                recv_file(conn, download_dir=tmp_path / "downloads")
+
+        receiver = threading.Thread(target=_accept)
+        receiver.start()
+
+        sender = send_file_async(
+            sender_name="Khang",
+            sender_tcp_port=5000,
+            peer_host="127.0.0.1",
+            peer_port=port,
+            filepath=src_file,
+            on_done=done_paths.append,
+            on_error=errors.append,
+        )
+        sender.join(timeout=5)
+        receiver.join(timeout=5)
+        assert not sender.is_alive()
+        assert not receiver.is_alive()
+
+    assert not errors
+    assert done_paths == [src_file]
+    assert (tmp_path / "downloads" / "async.txt").read_bytes() == b"hello async"
+
+
+def test_recv_timeout_deletes_part(tmp_path: Path) -> None:
+    s1, s2 = socket.socketpair()
+    with s1, s2:
+        s1.sendall(encode_file_header("slow.bin", 100) + b"partial")
+        with pytest.raises(TimeoutError):
+            recv_file(s2, download_dir=tmp_path, timeout=0.1)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_send_file_async_reports_error_without_crashing(tmp_path: Path) -> None:
+    errors: list[Exception] = []
+    thread = send_file_async(
+        sender_name="Khang",
+        sender_tcp_port=5000,
+        peer_host="127.0.0.1",
+        peer_port=5000,
+        filepath=tmp_path / "khong_ton_tai.pdf",
+        on_error=errors.append,
+    )
+    thread.join(timeout=5)
+    assert not thread.is_alive()
+    assert len(errors) == 1
+    assert isinstance(errors[0], FileNotFoundError)

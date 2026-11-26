@@ -14,6 +14,7 @@ MIN_FILE_BYTES = 0
 MAX_FILE_BYTES = 4 * 1024**3  # 4GiB
 FILE_CHUNK_SIZE = 64 * 1024  # 64KiB
 VALID_PURPOSES = frozenset({"chat", "file"})
+INVALID_FILENAME_CHARS = '<>:"/\\|?*'
 
 
 class FramingError(Exception):
@@ -46,6 +47,8 @@ class MsgFrame:
 
 @dataclass(frozen=True)
 class FileHeaderFrame:
+    """File metadata header preceding raw file bytes"""
+
     filename: str
     size: int
 
@@ -71,7 +74,7 @@ def validate_name(name: str) -> str:
 def sanitize_filename(raw_name: str) -> str:
     """Extract basename, replace unsafe characters, and validate filename"""
     base = raw_name.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
-    cleaned = base.replace("|", "_").replace("/", "_").replace("\\", "_")
+    cleaned = "".join("_" if ch in INVALID_FILENAME_CHARS else ch for ch in base)
     if cleaned in {"", ".", ".."}:
         raise ProtocolError(f"Invalid filename after sanitization: {raw_name!r}")
     if len(cleaned.encode("utf-8")) > MAX_HEADER_FIELD_BYTES:
