@@ -1,10 +1,9 @@
-
 from __future__ import annotations
 
 import threading
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.formatted import FormattedText
+from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from state import AppState
