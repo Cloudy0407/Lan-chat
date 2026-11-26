@@ -92,6 +92,8 @@ def test_empty_file_allowed() -> None:
         ("/home/user/report.docx", "report.docx"),
         (r"C:\Users\Khang\a|b.txt", "a_b.txt"),
         ("../../etc/passwd", "passwd"),
+        ("report:v1?.pdf", "report_v1_.pdf"),
+        ('a*b<c>d"e.txt', "a_b_c_d_e.txt"),
     ],
 )
 def test_sanitize_file_name_valid(raw_name: str, expected: str) -> None:
