@@ -43,7 +43,7 @@ byte**, nên gói là `MSG|35|Chào Minh, sẵn sàng demo chưa?`.
   Nhóm thêm trường `purpose` để acceptor phân loại kết nối ngay từ gói đầu,
   không phải đoán qua gói thứ hai.
 - `length` của MSG: 1 – 65 536 byte. Không gửi tin rỗng.
-- `filename`: chỉ lấy tên file, bỏ toàn bộ đường dẫn; thay `|`, `/`, `\` bằng
+- `filename`: chỉ lấy tên file, bỏ toàn bộ đường dẫn; thay  `<`,`>`,`:`,`"`,`/`,`\`,`|`,`?`,`*`,`—` bằng
   `_`; tối đa 255 byte. Bên gửi dùng đường dẫn đầy đủ để mở file, nhưng chỉ đưa
   tên file vào gói. **Bên nhận phải tự lọc lại** tên file theo cùng quy tắc và
   từ chối tên rỗng, `.`, `..`, không tin bên gửi (chống ghi file ra ngoài
