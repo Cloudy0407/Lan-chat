@@ -8,6 +8,8 @@ PORT = 9999
 BROADCAST_ADDR = "255.255.255.255"
 HELLO_INTERVAL = 3
 PEER_TIMEOUT = 10
+NAME_CHECK_WAIT = HELLO_INTERVAL + 1
+
 _sock: socket.socket | None = None
 _name = ""
 _tcp_port = 0
@@ -15,14 +17,19 @@ _status = "online"
 _warned: set[tuple[str, str, int]] = set()
 
 
-def start(name: str, tcp_port: int) -> None:
+def start(name: str, tcp_port: int) -> bool:
     global _name, _sock, _tcp_port
     _name = name
     _tcp_port = tcp_port
     _sock = _make_socket()
+    print("Đang kiểm tra tên...")
+    if _name_is_taken(NAME_CHECK_WAIT):
+        _sock.close()
+        return False
     threading.Thread(target=_broadcaster, daemon=True).start()
     threading.Thread(target=_listener, daemon=True).start()
     threading.Thread(target=_cleaner, daemon=True).start()
+    return True
 
 
 def _make_socket() -> socket.socket:
@@ -88,6 +95,27 @@ def _warn_once(name: str, ip: str, tcp_port: int, message: str) -> None:
     print(message)
 
 
+def _name_is_taken(wait: float) -> bool:
+    """Listen for `wait` seconds and return True if another peer already uses our name."""
+    deadline = time.monotonic() + wait
+    _sock.settimeout(0.5)
+    try:
+        while time.monotonic() < deadline:
+            try:
+                data, addr = _sock.recvfrom(1024)
+            except TimeoutError:
+                continue
+            hello = parse_hello(data)
+            if hello is None:
+                continue
+            name, tcp_port, status = hello
+            if name == _name:
+                return True
+        return False
+    finally:
+        _sock.settimeout(None)
+
+
 def _listener() -> None:
     """Receive HELLO packets and update the peer table."""
     while True:
@@ -134,7 +162,7 @@ def _cleaner() -> None:
 def send_hello_now() -> None:
     """Send one HELLO immediately (used when the status changes)."""
     packet = make_hello(_name, _tcp_port, _status)
-    _sock.sendto(packet, ("255.255.255.255", PORT))
+    _sock.sendto(packet, (BROADCAST_ADDR, PORT))
 
 
 def cmd_status(arg: str) -> None:
@@ -170,7 +198,10 @@ if __name__ == "__main__":
         "/status": cmd_status,
     }
 
-    start(sys.argv[1], int(sys.argv[2]))
+    if not start(sys.argv[1], int(sys.argv[2])):
+        print(f"[!] Tên '{sys.argv[1]}' đã có người dùng. Hãy chọn tên khác.")
+        sys.exit(1)
+
     try:
         while True:
             line = input("> ").strip()
