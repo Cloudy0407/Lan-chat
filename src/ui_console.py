@@ -48,6 +48,7 @@ class ConsoleUI:
                     bottom_toolbar=self._bottom_toolbar,
                     refresh_interval=0.25,
                 )
+                self._session.app.erase_when_done = True
             return self._session
 
     def invalidate(self) -> None:

@@ -71,7 +71,10 @@ class ChatManager:
         """Bind the TCP server socket and launch the acceptor thread."""
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            server.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                server.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            else:
+                server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind(("", self.state.self_tcp_port))
             server.listen()
             server.settimeout(ACCEPT_POLL_TIMEOUT)
