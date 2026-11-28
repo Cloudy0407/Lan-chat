@@ -44,7 +44,7 @@ class LanChatError(Exception):
 
 
 class PeerOfflineError(LanChatError):
-    """Section 5.3: Connecting to a user who is offline or does not exist.""""
+    """Section 5.3: Connecting to a user who is offline or does not exist."""
 
     def __init__(self, target: str) -> None:
         super().__init__(f"[!] Error: User '{target}' is offline or not found.")
