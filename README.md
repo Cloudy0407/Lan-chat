@@ -100,18 +100,6 @@ python3 src/main.py --name Khang --port 5002 --bcast 127.255.255.255
 
 ## 3. How to Test
 
-### Automated Tests (`pytest`)
-Install `pytest` (if not already installed):
-```bash
-pip install pytest
-```
-
-Run the full test suite from the source root folder:
-```bash
-python -m pytest -v
-```
-
-### Manual Functional Testing
 With two instances running (`Duy` on port `5001` and `Khang` on port `5002`):
 
 1. **Discovery & Duplicate Name:** Wait ~4–7 seconds until both terminals show `<peer> is online`. Launch a third instance using `--name Duy --port 5003` and verify it rejects the duplicate name and exits.
