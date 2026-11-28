@@ -36,7 +36,7 @@ def format_error(message: str, *, with_help: bool = False) -> str:
 
 
 class LanChatError(Exception):
-    """Lớp lỗi cơ sở của ứng dụng LAN Chat."""
+    """Base error class for the LAN Chat application."""
 
     def __init__(self, message: str) -> None:
         self.message = message
@@ -44,21 +44,21 @@ class LanChatError(Exception):
 
 
 class PeerOfflineError(LanChatError):
-    """Mục 5.3: Kết nối tới người dùng đã offline hoặc không tồn tại."""
+    """Section 5.3: Connecting to a user who is offline or does not exist.""""
 
     def __init__(self, target: str) -> None:
         super().__init__(f"[!] Error: User '{target}' is offline or not found.")
 
 
 class PeerDisconnectedError(LanChatError):
-    """Mục 5.3: Đối phương đóng kết nối hoặc crash giữa chừng."""
+    """Section 5.3: The other party closes the connection or crashes unexpectedly."""
 
     def __init__(self, peer_name: str) -> None:
         super().__init__(f"[*] {peer_name} disconnected. Returned to main prompt.")
 
 
 class FileTransferInterruptedError(LanChatError):
-    """Mục 5.3: Lỗi file không tồn tại hoặc quá trình truyền bị ngắt."""
+    """Section 5.3: Error due to a non-existent file or an interrupted transmission process."""
 
     def __init__(self, reason: str, partial_path: str | None = None) -> None:
         cleanup_partial_file(partial_path)
@@ -66,14 +66,14 @@ class FileTransferInterruptedError(LanChatError):
 
 
 class InvalidCommandError(LanChatError):
-    """Mục 5.3: Nhập sai lệnh hoặc thiếu tham số."""
+    """Section 5.3: Incorrect command entry or missing parameters."""
 
     def __init__(self, short_help: str) -> None:
         super().__init__(f"[!] Invalid command. Usage: {short_help}")
 
 
 def cleanup_partial_file(file_path: str | None) -> bool:
-    """Xóa tệp tin đang nhận dở nếu quá trình truyền bị gián đoạn."""
+    """Delete the partially received file(.part) if the transfer process is interrupted."""
     if not file_path:
         return False
     try:
@@ -91,7 +91,7 @@ def handle_error(
     partial_file_path: str | None = None,
     context: str = "",
 ) -> str:
-    """Dọn partial file, ghi log lỗi, định dạng thông báo và in ra UI."""
+    """Clean up partial files, log errors, format notifications, and display them in the UI."""
     if partial_file_path:
         cleanup_partial_file(partial_file_path)
 
